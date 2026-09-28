@@ -1,7 +1,8 @@
 name: Build the Card site and publish Cards to Bluesky
 
-# One run: build the site, deploy it to GitHub Pages, then publish pending Cards,
-# so a Card's page is live before its post links to it. Receipts
+# One run: build and deploy the site to GitHub Pages and, in parallel, publish
+# pending Cards. A post may link to a page that is still deploying; the page
+# appears within a minute or two. Receipts
 # (cards/*/bluesky.json) are pushed with GITHUB_TOKEN, which triggers no
 # workflow; the next scheduled run rebuilds the site with them.
 on:
@@ -52,7 +53,6 @@ jobs:
         uses: actions/deploy-pages@v4
 
   publish:
-    needs: deploy
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

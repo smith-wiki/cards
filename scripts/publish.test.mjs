@@ -49,7 +49,7 @@ function network({ visible = {}, routes = {} } = {}) {
     for (const [prefix, handler] of Object.entries(routes)) {
       if (url.startsWith(prefix)) return handler(url, init);
     }
-    if (url.startsWith("https://cards.smith.wiki/")) return new Response("ok");
+    if (url.startsWith("https://cards.smith.wiki/")) throw new Error(`publication must not fetch Card pages: ${url}`);
     if (url.endsWith("/com.atproto.server.createSession")) {
       const { identifier } = JSON.parse(init.body);
       const author = identifier.split(".")[0];
@@ -86,7 +86,6 @@ async function run(root, net, options = {}) {
     fetchImpl: net.fetchImpl,
     store,
     log: (line) => lines.push(line),
-    sleep: async () => {},
     now: () => Date.parse("2026-09-28T15:00:00Z"),
     ...options,
   });
@@ -278,7 +277,7 @@ test("a Link uses cardyb metadata when it has a preview", async () => {
   assert.equal(net.calls.some((call) => call.url === "https://example.com/paper"), false);
 });
 
-test("an Article embeds the Card page with the plain Short text and the Article's first paragraph", async () => {
+test("an Article previews the Card page as 'Read more' with the Article's first paragraph", async () => {
   const root = await repo([{
     id: ID[0],
     body: `Findings, building on [the survey](${page(ID[3])}).`,
@@ -288,7 +287,7 @@ test("an Article embeds the Card page with the plain Short text and the Article'
   await run(root, net);
   assert.deepEqual(net.created[0].record.embed, {
     $type: "app.bsky.embed.external",
-    external: { uri: page(ID[0]), title: "Findings, building on the survey.", description: "Agents share a wiki across sessions." },
+    external: { uri: page(ID[0]), title: "Read more", description: "Agents share a wiki across sessions." },
   });
 });
 
@@ -296,26 +295,6 @@ test("an Article description is cut to 300 code points", () => {
   const description = articleDescription(`${"é".repeat(400)}\n\nNext.`);
   assert.equal(Array.from(description).length, 300);
   assert.ok(description.endsWith("…"));
-});
-
-test("Cards whose page is not live stay pending once the wait budget is spent", async () => {
-  const root = await repo([{ id: ID[0] }, { id: ID[1] }]);
-  let clock = 0;
-  const sleeps = [];
-  const net = network({ routes: { "https://cards.smith.wiki/": () => new Response("missing", { status: 404 }) } });
-  const { result } = await run(root, net, {
-    now: () => clock,
-    sleep: async (ms) => {
-      sleeps.push(ms);
-      clock += ms;
-    },
-    pageWaitBudgetMs: 60_000,
-    pagePollIntervalMs: 20_000,
-  });
-  assert.deepEqual(result.deferred, [ID[0], ID[1]]);
-  assert.equal(net.created.length, 0);
-  assert.equal(clock, 60_000);
-  assert.equal(net.calls.filter((call) => call.url === page(ID[1])).length, 1);
 });
 
 test("the git receipt store commits a receipt once and never overwrites it", async () => {

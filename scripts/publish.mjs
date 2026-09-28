@@ -2,7 +2,7 @@
 //
 // A Card is pending while cards/<id>/bluesky.json is absent. Pending Cards are
 // processed in ascending Card ID order; each is posted from its author's
-// account only after its Card site page is live, with rkey = Card ID so a
+// account right away, without waiting for its page, with rkey = Card ID so a
 // retry can never create a second post. Failures write nothing and are retried
 // on the next run.
 //
@@ -24,7 +24,6 @@ import {
   cardPageUrl,
   graphemeLength,
   loadCards,
-  plainText,
 } from "../lib/cards.mjs";
 
 const PUBLIC_API = "https://public.api.bsky.app";
@@ -33,8 +32,8 @@ const USER_AGENT = "smith-wiki-cards-publisher";
 const IMAGE_MAX_BYTES = 1_000_000;
 const THUMB_MAX_BYTES = 1_000_000;
 const FETCH_TIMEOUT_MS = 15_000;
-const PAGE_WAIT_BUDGET_MS = 10 * 60_000;
-const PAGE_POLL_INTERVAL_MS = 20_000;
+/** Title of an Article Card's link preview; the post's text already carries the Short text. */
+export const ARTICLE_PREVIEW_TITLE = "Read more";
 const AUTHORS = { agent: "AGENT", operator: "OPERATOR" };
 
 function errorMessage(error) {
@@ -219,7 +218,7 @@ function clientsFromEnv(env, fetchImpl) {
 
 /**
  * Publishes every pending Card it can. Returns the Card IDs by outcome:
- * published, deferred (page not live or parent not visible; retried next run),
+ * published, deferred (parent not visible yet; retried next run),
  * failed (logged; retried next run).
  */
 export async function publish({
@@ -230,10 +229,7 @@ export async function publish({
   clientFor = clientsFromEnv(env, fetchImpl),
   dryRun = false,
   now = () => Date.now(),
-  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   log = console.log,
-  pageWaitBudgetMs = PAGE_WAIT_BUDGET_MS,
-  pagePollIntervalMs = PAGE_POLL_INTERVAL_MS,
 } = {}) {
   const result = { published: [], deferred: [], failed: [] };
   const cards = await loadCards(path.join(root, "cards"), {
@@ -245,32 +241,8 @@ export async function publish({
   const byId = new Map(cards.map((card) => [card.id, card]));
   const receipts = new Map(cards.filter((card) => card.receipt).map((card) => [card.id, card.receipt]));
   const pending = cards.filter((card) => !card.receipt);
-  const deadline = now() + pageWaitBudgetMs;
   const dryClients = {};
   const accountFor = (author) => (dryRun ? (dryClients[author] ??= new DryRunClient(author)) : clientFor(author));
-
-  async function pageIsLive(id) {
-    try {
-      const response = await fetchImpl(cardPageUrl(id), {
-        headers: { "User-Agent": USER_AGENT, "Cache-Control": "no-cache" },
-        redirect: "manual",
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      });
-      return response.status === 200;
-    } catch {
-      return false;
-    }
-  }
-
-  // Polls until the page is live or the run's shared budget is spent; once it
-  // is spent, each remaining Card still gets one check.
-  async function waitForPage(id) {
-    for (;;) {
-      if (await pageIsLive(id)) return true;
-      if (dryRun || now() + pagePollIntervalMs > deadline) return false;
-      await sleep(pagePollIntervalMs);
-    }
-  }
 
   async function publicPost(uri) {
     const response = await fetchImpl(`${PUBLIC_API}/xrpc/app.bsky.feed.getPosts?uris=${encodeURIComponent(uri)}`, {
@@ -361,7 +333,7 @@ export async function publish({
     if (card.article !== null) {
       return {
         $type: "app.bsky.embed.external",
-        external: { uri: cardPageUrl(card.id), title: plainText(card.shortText), description: articleDescription(card.article) },
+        external: { uri: cardPageUrl(card.id), title: ARTICLE_PREVIEW_TITLE, description: articleDescription(card.article) },
       };
     }
     return undefined;
@@ -373,7 +345,6 @@ export async function publish({
     if (length > SHORT_TEXT_MAX_GRAPHEMES) {
       throw new Error(`Short text is ${length} graphemes; Bluesky allows ${SHORT_TEXT_MAX_GRAPHEMES}`);
     }
-    if (!(await waitForPage(card.id))) return `deferred: ${cardPageUrl(card.id)} is not live yet`;
     const refs = card.parent ? await replyRefs(card.parent.id, card.parent.uri) : null;
     if (card.parent && !refs) return `deferred: parent ${card.parent.uri} is not visible yet`;
 

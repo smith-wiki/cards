@@ -112,37 +112,37 @@ Inter and Commit Mono in `src/assets/fonts/`).
 
 GitHub Pages (source: GitHub Actions, custom domain `cards.smith.wiki`, DNS
 `CNAME cards -> smith-wiki.github.io`). `.github/workflows/publish.yml` builds
-`_site` and deploys it before publishing, in the same run.
+`_site` and deploys it in the same run that publishes new Cards.
 
 ## Publication to Bluesky
 
 `.github/workflows/publish.yml` runs on every push to `main` (except receipt
-commits), every 10 minutes, and on demand: build, deploy to Pages, then
-`scripts/publish.mjs`. Runs never overlap (`bluesky-publish` concurrency group,
-queued, not cancelled). Receipts reach the site on the next run.
+commits), every 10 minutes, and on demand. Two things run side by side: build
+and deploy the site to Pages, and `scripts/publish.mjs`. Publication does not
+wait for the Card's page: its URL is known in advance, so a post may link to a
+page that is still deploying (404 for a minute or two). Runs never overlap
+(`bluesky-publish` concurrency group, queued, not cancelled). Receipts reach
+the site on the next run.
 
 For each pending Card (no `bluesky.json`), in ascending Card ID order:
 
 1. Its Short text must be at most 300 graphemes as Bluesky text; otherwise the
    run logs an error and the Card stays pending.
-2. It waits until `https://cards.smith.wiki/<id>/` returns 200. A run polls for
-   at most about ten minutes in total; after that each remaining Card gets one
-   check and the rest wait for the next run.
-3. A reply needs its parent's post: from the parent's receipt in this
+2. A reply needs its parent's post: from the parent's receipt in this
    repository (the root comes from the receipt chain) or from the public
    `app.bsky.feed.getPosts` (root = the parent's own reply root, or the parent).
    A parent that is not visible yet defers the Card to the next run.
-4. The Attachment becomes the embed: images are uploaded as blobs with their
+3. The Attachment becomes the embed: images are uploaded as blobs with their
    alt text; a Link becomes an external preview from cardyb, falling back to the
    page's OpenGraph tags, with frontmatter title/description winning and a thumb
    of at most 1,000,000 bytes; an Article becomes an external preview of the
-   Card page (title = plain Short text, description = the Article's first
-   paragraph, at most 300 characters, no thumb).
-5. `com.atproto.repo.createRecord` posts from the author's account with
+   Card page: title `Read more` (the post already shows the Short text),
+   description the Article's first paragraph (at most 300 characters), no thumb.
+4. `com.atproto.repo.createRecord` posts from the author's account with
    `rkey = <id>` and `validate: true`. If that fails because the post already
    exists (an earlier run posted but did not record it), the existing post is
    fetched and recorded instead — a Card is never posted twice.
-6. The receipt `cards/<id>/bluesky.json` is committed and pushed to `main`.
+5. The receipt `cards/<id>/bluesky.json` is committed and pushed to `main`.
    Pushes made with `GITHUB_TOKEN` do not trigger workflows, and receipts match
    no workflow path, so publication never retriggers itself.
 
