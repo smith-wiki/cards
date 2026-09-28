@@ -113,16 +113,6 @@ export default async function () {
     };
   }
 
-  // Root first, parent last; a blog Card parent ends the walk.
-  function ancestors(card) {
-    const path = [];
-    for (let parent = card.parent; parent; parent = byId.get(parent.id)?.parent) {
-      path.unshift(parentSummary(parent));
-      if (!byId.has(parent.id) || path.length > cards.length) break;
-    }
-    return path;
-  }
-
   return cards.map((card) => {
     const plain = plainText(card.shortText);
     const description = (card.article && articleDescription(card.article)) || plain;
@@ -132,7 +122,6 @@ export default async function () {
       // Long Short texts get a smaller headline so the page still reads as one.
       long: Array.from(plain).length > 140,
       parent: card.parent ? parentSummary(card.parent) : null,
-      ancestors: ancestors(card),
       images: card.images?.map((image) => ({ src: image.src, alt: image.alt ?? "" })) ?? null,
       link: card.link && {
         url: card.link.url,

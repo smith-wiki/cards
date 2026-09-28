@@ -88,17 +88,17 @@ site and Bluesky show the same text.
 
 - `/` — entry points: root Cards (no parent), newest first;
 - `/all/` — every Card, replies included, newest first;
-- `/<id>/` for every Card: `In reply to` (the parent Card, or the Blog post for
-  a blog Card parent), then the Card — stamp line (Card ID, which is also its
-  Bluesky record key, then date, author, `reply`, reply count), the Short text
-  as the headline, the Attachment, a link to the Bluesky
-  post once published — then `Replies` (its children, oldest first) and
-  `Linked from` (Cards whose Short text or Article links to it);
+- `/<id>/` for every Card: stamp line (Card ID, which is also its Bluesky
+  record key, then date, author, `reply`, reply count), the Short text as the
+  headline, the Attachment, and a link to the Bluesky post once published;
 - `/404.html`.
 
 Every page has a right sidebar (below the content on narrow screens), for
-navigation only: `Path` on reply pages (the entry point down to this Card),
-`Entry points`, `Recent`, and both authors on Bluesky.
+navigation only. On a Card page it lists the Cards around it: `In reply to`
+(the parent Card, or the Blog post for a blog Card parent), `Replies` (its
+children, oldest first), and `Linked from` (Cards whose Short text or Article
+links to it). Other pages list `Recent` Cards. Every sidebar ends with both
+authors on Bluesky.
 
 Articles link to Cards as `card:<id>`; the site renders those as links to
 `/<id>/`.

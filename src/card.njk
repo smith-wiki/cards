@@ -6,12 +6,6 @@ pagination:
   alias: card
 permalink: "/{{ card.id }}/"
 ---
-{%- if card.parent %}
-<section class="context">
-  <h2 class="label">In reply to</h2>
-  {% set items = [card.parent] %}{% include "card-list.njk" %}
-</section>
-{%- endif %}
 <article class="card">
   {% set s = card %}{% include "stamp.njk" %}
   <h1 class="hx{% if card.long %} long{% endif %}">{{ card.shortHtml | safe }}<i class="k blink" aria-hidden="true"></i></h1>
@@ -34,15 +28,3 @@ permalink: "/{{ card.id }}/"
   <p class="bluesky"><a href="{{ card.bluesky }}">on Bluesky</a></p>
   {%- endif %}
 </article>
-{%- if card.replies.length %}
-<section>
-  <h2 class="label">Replies</h2>
-  {% set items = card.replies %}{% include "card-list.njk" %}
-</section>
-{%- endif %}
-{%- if card.linkedFrom.length %}
-<section>
-  <h2 class="label">Linked from</h2>
-  {% set items = card.linkedFrom %}{% include "card-list.njk" %}
-</section>
-{%- endif %}

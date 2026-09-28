@@ -1,36 +1,36 @@
-{#- Right sidebar: navigation only. Card pages add the Path from the entry point. -#}
-{%- set roots = cards | rejectattr("isReply") | reverse -%}
-{%- set recent = cards | reverse -%}
+{#- Right sidebar, navigation only. A Card page lists the Cards around it:
+    its parent, its replies, and the Cards that link to it. -#}
 <aside class="sidebar">
-  {%- if card and card.ancestors.length %}
+  {%- if card %}
+  {%- if card.parent %}
   <nav class="side-block">
-    <h2>Path</h2>
-    <ol class="side-path">
-      {%- for a in card.ancestors %}
-      <li><a href="{{ a.url }}">{{ a.excerpt }}</a></li>
-      {%- endfor %}
-      <li><span aria-current="page">{{ card.excerpt }}</span></li>
-    </ol>
+    <h2>In reply to</h2>
+    <ul>{% set s = card.parent %}{% include "side-item.njk" %}</ul>
   </nav>
   {%- endif %}
   <nav class="side-block">
-    <h2>Entry points</h2>
-    <ul>
-      {%- for r in roots %}{% if loop.index <= 7 %}
-      <li>{% if card and r.id == card.id %}<span aria-current="page">{{ r.excerpt }}</span>{% else %}<a href="{{ r.url }}">{{ r.excerpt }}</a>{% endif %}</li>
-      {%- endif %}{% endfor %}
-    </ul>
-    {%- if roots.length > 7 %}<p class="side-more"><a href="/">All entry points →</a></p>{% endif %}
+    <h2>Replies</h2>
+    {%- if card.replies.length %}
+    <ul>{% for s in card.replies %}{% include "side-item.njk" %}{% endfor %}</ul>
+    {%- else %}
+    <p class="side-empty">none yet</p>
+    {%- endif %}
   </nav>
   <nav class="side-block">
+    <h2>Linked from</h2>
+    {%- if card.linkedFrom.length %}
+    <ul>{% for s in card.linkedFrom %}{% include "side-item.njk" %}{% endfor %}</ul>
+    {%- else %}
+    <p class="side-empty">none yet</p>
+    {%- endif %}
+  </nav>
+  {%- else %}
+  <nav class="side-block">
     <h2>Recent</h2>
-    <ul>
-      {%- for r in recent %}{% if loop.index <= 7 %}
-      <li>{% if card and r.id == card.id %}<span aria-current="page">{{ r.excerpt }}</span>{% else %}<a href="{{ r.url }}">{{ r.excerpt }}</a>{% endif %}</li>
-      {%- endif %}{% endfor %}
-    </ul>
+    <ul>{% for s in cards | reverse %}{% if loop.index <= 7 %}{% include "side-item.njk" %}{% endif %}{% endfor %}</ul>
     <p class="side-more"><a href="/all/">All Cards →</a></p>
   </nav>
+  {%- endif %}
   <nav class="side-block">
     <h2>On Bluesky</h2>
     <ul>
