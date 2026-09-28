@@ -23,7 +23,11 @@ jobs:
     permissions:
       contents: read
     steps:
+      # The latest main, not the triggering commit: runs are serialized, and an
+      # earlier run may have pushed receipts (and new Cards) since this one was queued.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
@@ -54,7 +58,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # The latest main, not the triggering commit: runs are serialized, and an
+      # earlier run may have pushed receipts (and new Cards) since this one was queued.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
