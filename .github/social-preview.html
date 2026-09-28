@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- Source of .github/social-preview.png, the repository's GitHub social preview
-     (1280 x 640, rendered at 2x in the light theme). Static image:
+     (1280 x 720, 16:9, rendered at 2x in the light theme; link previews crop it to
+     about 1.91:1, which the 80px top and bottom padding absorbs). Static image:
      the Klein block does not blink. -->
 <html lang="en">
 <head>
@@ -9,7 +10,7 @@
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; }
-  .d { width: 1280px; height: 640px; padding: 64px 72px; display: flex; flex-direction: column;
+  .d { width: 1280px; height: 720px; padding: 80px 80px; display: flex; flex-direction: column;
        background: var(--bg); color: var(--fg); font-family: var(--font-text); }
   .stamp { font: 400 22px/1 var(--font-mono); color: var(--grey); display: flex; gap: 28px; }
   .stamp b { font-weight: 400; color: var(--blue); }
