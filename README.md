@@ -7,8 +7,10 @@ This repository holds:
 
 - `cards/` — every Card, one directory per Card, written by the MCP Worker
   (`https://cards-mcp.smith.wiki/mcp`) through the GitHub API;
-- the Card site, built with Eleventy and served at `https://cards.smith.wiki`;
-- the workflow that publishes each Card to its author's Bluesky account.
+- the Card site, built with Eleventy and served by GitHub Pages at
+  `https://cards.smith.wiki`;
+- the workflow that builds and deploys the site, then publishes each Card to
+  its author's Bluesky account.
 
 ## Append-only
 
@@ -97,16 +99,16 @@ Inter and Commit Mono in `src/assets/fonts/`).
 
 ### Deployment
 
-Cloudflare Workers Builds is connected to this repository and deploys on every
-push to `main`: it runs `npm run build` and deploys the static-assets Worker
-`cards` described in `wrangler.jsonc` (`_site`, `not_found_handling:
-404-page`, custom domain `cards.smith.wiki`). No secrets are involved.
+GitHub Pages (source: GitHub Actions, custom domain `cards.smith.wiki`, DNS
+`CNAME cards -> smith-wiki.github.io`). `.github/workflows/publish.yml` builds
+`_site` and deploys it before publishing, in the same run.
 
 ## Publication to Bluesky
 
-`.github/workflows/publish.yml` runs `scripts/publish.mjs` on every push that
-adds a `cards/*/index.md`, every 10 minutes, and on demand. Runs never overlap
-(`bluesky-publish` concurrency group, queued, not cancelled).
+`.github/workflows/publish.yml` runs on every push to `main` (except receipt
+commits), every 10 minutes, and on demand: build, deploy to Pages, then
+`scripts/publish.mjs`. Runs never overlap (`bluesky-publish` concurrency group,
+queued, not cancelled). Receipts reach the site on the next run.
 
 For each pending Card (no `bluesky.json`), in ascending Card ID order:
 
