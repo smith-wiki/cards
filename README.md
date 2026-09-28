@@ -43,7 +43,7 @@ link:                                 # optional Attachment: Link
   title: "Optional override"          # optional
   description: "Optional override"    # optional
 images:                               # optional Attachment: 1-4 images
-  - src: https://cards-files.smith.wiki/<sha256>.jpg
+  - src: https://files.smith.wiki/cards/<sha256>.jpg
     alt: "Required English alt text"
     mime: image/jpeg
 article: true                         # optional Attachment: Article, body in article.md
