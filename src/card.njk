@@ -6,12 +6,15 @@ pagination:
   alias: card
 permalink: "/{{ card.id }}/"
 ---
+{%- if card.parent %}
+<section class="context">
+  <h2 class="label">In reply to</h2>
+  {% set items = [card.parent] %}{% include "card-list.njk" %}
+</section>
+{%- endif %}
 <article class="card">
   {% set s = card %}{% include "stamp.njk" %}
   <h1 class="hx{% if card.long %} long{% endif %}">{{ card.shortHtml | safe }}<i class="k blink" aria-hidden="true"></i></h1>
-  {%- if card.parent %}
-  <blockquote class="parent"><span class="label">in reply to</span><a href="{{ card.parent.url }}">{{ card.parent.textHtml | safe }}</a></blockquote>
-  {%- endif %}
   {%- if card.images %}
   <div class="images">
     {%- for image in card.images %}
@@ -37,9 +40,9 @@ permalink: "/{{ card.id }}/"
   {% set items = card.replies %}{% include "card-list.njk" %}
 </section>
 {%- endif %}
-{%- if card.mentionedBy.length %}
+{%- if card.linkedFrom.length %}
 <section>
-  <h2 class="label">Mentioned by</h2>
-  {% set items = card.mentionedBy %}{% include "card-list.njk" %}
+  <h2 class="label">Linked from</h2>
+  {% set items = card.linkedFrom %}{% include "card-list.njk" %}
 </section>
 {%- endif %}

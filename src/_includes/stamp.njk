@@ -1,1 +1,1 @@
-<div class="stamp"><a href="{{ s.url }}"><time datetime="{{ s.created }}">{{ s.date }}</time></a><span>{{ s.author }}</span>{% if s.isReply %}<span>reply</span>{% endif %}</div>
+<div class="stamp"><a href="{{ s.url }}"><time datetime="{{ s.created }}">{{ s.date }}</time></a><span>{{ s.author }}</span>{% if s.source == "blog" %}<span>blog</span>{% elif s.isReply %}<span>reply</span>{% endif %}{% if s.replyCount %}<span>{{ s.replyCount }} {{ "reply" if s.replyCount == 1 else "replies" }}</span>{% endif %}</div>

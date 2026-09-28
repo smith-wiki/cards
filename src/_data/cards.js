@@ -3,7 +3,10 @@
 import path from "node:path";
 import MarkdownIt from "markdown-it";
 import {
+  CARD_ID,
+  articleCardIds,
   articleDescription,
+  cardIdCreated,
   cardPageUrl,
   linkedCardIds,
   loadCards,
@@ -13,6 +16,12 @@ import {
 
 // Articles may cite external references; raw HTML is never passed through.
 const markdown = new MarkdownIt({ html: false, linkify: true });
+// Articles link to Cards as `card:<id>`; those become the Card's page on this site.
+const normalizeLink = markdown.normalizeLink.bind(markdown);
+markdown.normalizeLink = (url) => {
+  const id = url.startsWith("card:") ? url.slice(5) : null;
+  return id && CARD_ID.test(id) ? `/${id}/` : normalizeLink(url);
+};
 // The Short text is the page's only h1; Article headings start at h2.
 markdown.core.ruler.push("demote_headings", (state) => {
   for (const token of state.tokens) {
@@ -48,7 +57,7 @@ function host(url) {
   }
 }
 
-function summary(card) {
+function summary(card, replyCount = 0) {
   return {
     id: card.id,
     url: `/${card.id}/`,
@@ -56,30 +65,53 @@ function summary(card) {
     date: card.created.slice(0, 10),
     author: card.author,
     isReply: Boolean(card.parent),
+    replyCount,
     shortHtml: shortTextHtml(card.shortText),
   };
 }
 
 export default async function () {
   const cards = await loadCards(path.resolve(import.meta.dirname, "../../cards"));
+  const byId = new Map(cards.map((card) => [card.id, card]));
   const replies = new Map();
-  const mentions = new Map();
+  const links = new Map();
   for (const card of cards) {
     if (card.parent) replies.set(card.parent.id, [...(replies.get(card.parent.id) ?? []), card]);
-    for (const id of linkedCardIds(card.shortText)) {
-      if (id !== card.id) mentions.set(id, [...(mentions.get(id) ?? []), card]);
+    // A Card links to another from its Short text or its Article.
+    const linked = new Set([...linkedCardIds(card.shortText), ...(card.article ? articleCardIds(card.article) : [])]);
+    for (const id of linked) {
+      if (id !== card.id) links.set(id, [...(links.get(id) ?? []), card]);
     }
+  }
+  const summarize = (card) => summary(card, replies.get(card.id)?.length ?? 0);
+
+  // A parent outside this repository is a blog Card: its page is the Blog post.
+  function parentSummary(parent) {
+    const local = byId.get(parent.id);
+    if (local) return summarize(local);
+    const created = cardIdCreated(parent.id);
+    return {
+      id: parent.id,
+      url: parent.url,
+      created,
+      date: created.slice(0, 10),
+      author: "operator",
+      source: "blog",
+      isReply: false,
+      replyCount: replies.get(parent.id)?.length ?? 0,
+      shortHtml: textHtml(parent.text ?? ""),
+    };
   }
 
   return cards.map((card) => {
     const plain = plainText(card.shortText);
     const description = (card.article && articleDescription(card.article)) || plain;
     return {
-      ...summary(card),
+      ...summarize(card),
       plain,
       // Long Short texts get a smaller headline so the page still reads as one.
       long: Array.from(plain).length > 140,
-      parent: card.parent && { url: card.parent.url, textHtml: textHtml(card.parent.text ?? "") },
+      parent: card.parent ? parentSummary(card.parent) : null,
       images: card.images?.map((image) => ({ src: image.src, alt: image.alt ?? "" })) ?? null,
       link: card.link && {
         url: card.link.url,
@@ -88,8 +120,8 @@ export default async function () {
       },
       articleHtml: card.article === null ? null : markdown.render(card.article),
       bluesky: card.receipt?.url ?? null,
-      replies: (replies.get(card.id) ?? []).map(summary),
-      mentionedBy: (mentions.get(card.id) ?? []).map(summary),
+      replies: (replies.get(card.id) ?? []).map(summarize),
+      linkedFrom: (links.get(card.id) ?? []).map(summarize),
       meta: {
         title: plain,
         description,

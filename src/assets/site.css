@@ -37,12 +37,6 @@ main > .stamp, .card > .stamp { margin-top: 48px; }
 .lead { color: var(--grey); margin: 0 0 32px; }
 .empty { font: 400 15px var(--font-mono); color: var(--grey); }
 
-/* parent quote */
-.parent { margin: 0 0 32px; padding: 2px 0 2px 18px; border-left: 4px solid var(--klein); font: 400 15px/1.5 var(--font-mono); }
-.parent .label { display: block; margin: 0 0 4px; color: var(--grey); }
-.parent a { color: var(--fg); text-decoration-color: var(--faint); }
-.parent a:hover { color: var(--blue); }
-
 /* Attachment: images */
 .images { display: grid; gap: 12px; margin: 0 0 32px; }
 .images figure { margin: 0; }
@@ -77,6 +71,9 @@ main > .stamp, .card > .stamp { margin-top: 48px; }
 
 /* Replies, Mentioned by, and the home list */
 h2.label { font: 400 13px/1 var(--font-mono); color: var(--grey); margin: 56px 0 0; padding-bottom: 12px; border-bottom: 2px solid var(--fg); }
+.context { margin: 48px 0 0; }
+.context h2.label { margin-top: 0; }
+.context .cards li { border-bottom: 0; padding-bottom: 0; }
 .cards { list-style: none; margin: 0; padding: 0; }
 .cards li { padding: 18px 0; border-bottom: 1px solid var(--faint); }
 .cards p { margin: 6px 0 0; overflow-wrap: break-word; }

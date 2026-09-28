@@ -86,11 +86,17 @@ site and Bluesky show the same text.
 
 `npm run build` renders `_site/` from `cards/` with Eleventy:
 
-- `/<id>/` for every Card: stamp line (date, author, `reply`), the Short text as
-  the headline, the parent's Short text when it is a reply, the Attachment, a
-  link to the Bluesky post once published, then Replies and Mentioned by;
-- `/` — every Card, newest first;
+- `/` — entry points: root Cards (no parent), newest first;
+- `/all/` — every Card, replies included, newest first;
+- `/<id>/` for every Card: `In reply to` (the parent Card, or the Blog post for
+  a blog Card parent), then the Card — stamp line (date, author, `reply`, reply
+  count), the Short text as the headline, the Attachment, a link to the Bluesky
+  post once published — then `Replies` (its children, oldest first) and
+  `Linked from` (Cards whose Short text or Article links to it);
 - `/404.html`.
+
+Articles link to Cards as `card:<id>`; the site renders those as links to
+`/<id>/`.
 
 Card files are data, not pages: `src/_data/cards.js` reads them (through
 `lib/cards.mjs`, shared with the publisher) and `src/card.njk` paginates over
