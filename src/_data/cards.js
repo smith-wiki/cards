@@ -57,6 +57,14 @@ function host(url) {
   }
 }
 
+// Sidebar label: the plain Short text cut at a word, at most `max` characters.
+function excerpt(plain, max = 72) {
+  const chars = Array.from(plain.replace(/\s+/g, " ").trim());
+  if (chars.length <= max) return chars.join("");
+  const cut = chars.slice(0, max).join("");
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), max / 2)).replace(/[\s,.;:]+$/, "")}…`;
+}
+
 function summary(card, replyCount = 0) {
   return {
     id: card.id,
@@ -67,6 +75,7 @@ function summary(card, replyCount = 0) {
     isReply: Boolean(card.parent),
     replyCount,
     shortHtml: shortTextHtml(card.shortText),
+    excerpt: excerpt(plainText(card.shortText)),
   };
 }
 
@@ -100,7 +109,18 @@ export default async function () {
       isReply: false,
       replyCount: replies.get(parent.id)?.length ?? 0,
       shortHtml: textHtml(parent.text ?? ""),
+      excerpt: excerpt(parent.text ?? ""),
     };
+  }
+
+  // Root first, parent last; a blog Card parent ends the walk.
+  function ancestors(card) {
+    const path = [];
+    for (let parent = card.parent; parent; parent = byId.get(parent.id)?.parent) {
+      path.unshift(parentSummary(parent));
+      if (!byId.has(parent.id) || path.length > cards.length) break;
+    }
+    return path;
   }
 
   return cards.map((card) => {
@@ -112,6 +132,7 @@ export default async function () {
       // Long Short texts get a smaller headline so the page still reads as one.
       long: Array.from(plain).length > 140,
       parent: card.parent ? parentSummary(card.parent) : null,
+      ancestors: ancestors(card),
       images: card.images?.map((image) => ({ src: image.src, alt: image.alt ?? "" })) ?? null,
       link: card.link && {
         url: card.link.url,

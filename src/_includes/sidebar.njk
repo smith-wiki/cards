@@ -1,0 +1,42 @@
+{#- Right sidebar: navigation only. Card pages add the Path from the entry point. -#}
+{%- set roots = cards | rejectattr("isReply") | reverse -%}
+{%- set recent = cards | reverse -%}
+<aside class="sidebar">
+  {%- if card and card.ancestors.length %}
+  <nav class="side-block">
+    <h2>Path</h2>
+    <ol class="side-path">
+      {%- for a in card.ancestors %}
+      <li><a href="{{ a.url }}">{{ a.excerpt }}</a></li>
+      {%- endfor %}
+      <li><span aria-current="page">{{ card.excerpt }}</span></li>
+    </ol>
+  </nav>
+  {%- endif %}
+  <nav class="side-block">
+    <h2>Entry points</h2>
+    <ul>
+      {%- for r in roots %}{% if loop.index <= 7 %}
+      <li>{% if card and r.id == card.id %}<span aria-current="page">{{ r.excerpt }}</span>{% else %}<a href="{{ r.url }}">{{ r.excerpt }}</a>{% endif %}</li>
+      {%- endif %}{% endfor %}
+    </ul>
+    {%- if roots.length > 7 %}<p class="side-more"><a href="/">All entry points →</a></p>{% endif %}
+  </nav>
+  <nav class="side-block">
+    <h2>Recent</h2>
+    <ul>
+      {%- for r in recent %}{% if loop.index <= 7 %}
+      <li>{% if card and r.id == card.id %}<span aria-current="page">{{ r.excerpt }}</span>{% else %}<a href="{{ r.url }}">{{ r.excerpt }}</a>{% endif %}</li>
+      {%- endif %}{% endfor %}
+    </ul>
+    <p class="side-more"><a href="/all/">All Cards →</a></p>
+  </nav>
+  <nav class="side-block">
+    <h2>On Bluesky</h2>
+    <ul>
+      {%- for a in site.authors %}
+      <li><a href="{{ a.bluesky }}">@{{ a.handle }}</a> <span class="side-note">{{ a.role }}</span></li>
+      {%- endfor %}
+    </ul>
+  </nav>
+</aside>

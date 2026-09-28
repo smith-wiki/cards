@@ -5,7 +5,7 @@
 * { box-sizing: border-box; }
 html { background: var(--bg); color: var(--fg); }
 body { margin: 0; font: 400 18px/1.6 var(--font-text); -webkit-text-size-adjust: 100%; }
-.wrap { max-width: 46rem; margin: 0 auto; padding: 32px 24px 96px; }
+.wrap { max-width: 64rem; margin: 0 auto; padding: 32px 24px 96px; }
 
 a { color: var(--blue); text-underline-offset: .18em; text-decoration-thickness: .06em; }
 code, pre, kbd { font-family: var(--font-mono); font-variant-ligatures: none; }
@@ -77,3 +77,22 @@ h2.label { font: 400 13px/1 var(--font-mono); color: var(--grey); margin: 56px 0
 .cards { list-style: none; margin: 0; padding: 0; }
 .cards li { padding: 18px 0; border-bottom: 1px solid var(--faint); }
 .cards p { margin: 6px 0 0; overflow-wrap: break-word; }
+
+/* layout: content left, sidebar right (navigation only; scrolls with the page) */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 13rem; gap: 56px; align-items: start; }
+.sidebar { margin-top: 48px; font-size: 14px; line-height: 1.4; }
+.side-block { margin: 0 0 32px; }
+.side-block h2 { font: 400 13px/1 var(--font-mono); color: var(--grey); margin: 0 0 10px; padding-bottom: 10px; border-bottom: 2px solid var(--fg); }
+.side-block ul, .side-block ol { list-style: none; margin: 0; padding: 0; }
+.side-block li { padding: 5px 0; overflow-wrap: break-word; }
+.side-block a { color: var(--fg); text-decoration: none; }
+.side-block a:hover { color: var(--blue); }
+.side-block [aria-current] { color: var(--blue); }
+.side-path li + li::before { content: "→ "; color: var(--blue); font-family: var(--font-mono); }
+.side-more { margin: 6px 0 0; font: 400 13px var(--font-mono); }
+.side-more a { color: var(--grey); }
+.side-note { color: var(--grey); font: 400 12px var(--font-mono); }
+@media (max-width: 760px) {
+  .layout { display: block; }
+  .sidebar { margin-top: 64px; }
+}

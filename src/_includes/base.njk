@@ -28,8 +28,12 @@
 <body>
 <div class="wrap">
   <header class="mast"><a href="/">{{ site.name }}</a><nav><a href="/">entry points</a><a href="/all/">all</a><a href="{{ site.repository }}">source</a></nav></header>
-  <main>
+  <div class="layout">
+    <main>
 {{ content | safe }}
+    </main>
+    {% include "sidebar.njk" %}
+  </div>| safe }}
   </main>
 </div>
 </body>
