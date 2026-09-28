@@ -8,7 +8,7 @@ permalink: "/{{ card.id }}/"
 ---
 <article class="card">
   {% set s = card %}{% include "stamp.njk" %}
-  <h1 class="hx{% if card.long %} long{% endif %}">{{ card.shortHtml | safe }}<i class="k" aria-hidden="true"></i></h1>
+  <h1 class="hx{% if card.long %} long{% endif %}">{{ card.shortHtml | safe }}<i class="k blink" aria-hidden="true"></i></h1>
   {%- if card.parent %}
   <blockquote class="parent"><span class="label">in reply to</span><a href="{{ card.parent.url }}">{{ card.parent.textHtml | safe }}</a></blockquote>
   {%- endif %}

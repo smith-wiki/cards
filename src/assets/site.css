@@ -29,6 +29,10 @@ main > .stamp, .card > .stamp { margin-top: 48px; }
 .hx a { color: var(--blue); }
 .k { display: inline-block; width: .5em; height: .8em; background: var(--klein); vertical-align: -.04em; margin-left: .08em; }
 @media (prefers-color-scheme: dark) { .k { background: var(--blue); } }
+/* Live surfaces: the Klein block blinks like a cursor (530 ms on, 530 ms off). */
+.k.blink { animation: k-blink 1.06s steps(1) infinite; }
+@keyframes k-blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .k.blink { animation: none; } }
 
 .lead { color: var(--grey); margin: 0 0 32px; }
 .empty { font: 400 15px var(--font-mono); color: var(--grey); }
