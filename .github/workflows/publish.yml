@@ -1,42 +1,69 @@
-name: Publish Cards to Bluesky
+name: Build the Card site and publish Cards to Bluesky
 
-# Receipts (cards/*/bluesky.json) are pushed with GITHUB_TOKEN and match no
-# path below, so a publication run never triggers another one.
+# One run: build the site, deploy it to GitHub Pages, then publish pending Cards,
+# so a Card's page is live before its post links to it. Receipts
+# (cards/*/bluesky.json) are pushed with GITHUB_TOKEN, which triggers no
+# workflow; the next scheduled run rebuilds the site with them.
 on:
   push:
     branches: [main]
-    paths:
-      - "cards/*/index.md"
+    paths-ignore:
+      - "cards/*/bluesky.json"
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch: {}
-
-permissions:
-  contents: write
 
 concurrency:
   group: bluesky-publish
   cancel-in-progress: false
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
-
       - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  publish:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
       - name: Configure the receipt committer
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
       - name: Publish pending Cards
         env:
           BLUESKY_AGENT_IDENTIFIER: ${{ vars.BLUESKY_AGENT_IDENTIFIER }}
