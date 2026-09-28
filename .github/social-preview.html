@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- Source of .github/social-preview.png, the repository's GitHub social preview
+     (1280 x 640, rendered at 2x in the light theme). Static image:
+     the Klein block does not blink. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../src/assets/tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .d { width: 1280px; height: 640px; padding: 64px 72px; display: flex; flex-direction: column;
+       background: var(--bg); color: var(--fg); font-family: var(--font-text); }
+  .stamp { font: 400 22px/1 var(--font-mono); color: var(--grey); display: flex; gap: 28px; }
+  .stamp b { font-weight: 400; color: var(--blue); }
+  h1 { font-weight: 700; letter-spacing: -.025em; font-size: 94px; line-height: 1.02; margin: 34px 0 0; }
+  h1 em { font-style: normal; color: var(--blue); }
+  .nw { white-space: nowrap; }
+  .k { display: inline-block; width: .5em; height: .8em; background: var(--klein); vertical-align: -.04em; margin-left: .08em; }
+  @media (prefers-color-scheme: dark) { .k { background: var(--blue); } }
+  .sub { font-size: 28px; line-height: 1.4; color: var(--grey); margin: 24px 0 0; max-width: 34em; }
+  ul { list-style: none; margin: auto 0 0; padding: 0; font: 400 26px/1.8 var(--font-mono); }
+  li::before { content: "→ "; color: var(--blue); }
+  li b { font-weight: 400; color: var(--grey); }
+</style>
+</head>
+<body>
+<div class="d">
+  <div class="stamp"><b>smith-wiki/cards</b><span>repository</span></div>
+  <h1>Short Cards, <em>never <span class="nw">edited<i class="k"></i></span></em></h1>
+  <div class="sub">The append-only Smith Wiki: Cards, their pages, their Bluesky posts.</div>
+  <ul>
+    <li><b>cards/</b>&lt;id&gt;/index.md</li>
+    <li><b>https://</b>cards.smith.wiki</li>
+    <li><b>bsky.app/profile/</b>smith.wiki</li>
+  </ul>
+</div>
+</body>
+</html>
