@@ -1,0 +1,35 @@
+/* Andy Smith design tokens: Inter for headlines and text, Commit Mono for code, terminal, labels, and stamps. */
+
+@font-face { font-family: "Inter"; font-weight: 100 900; src: url(fonts/InterVariable.woff2) format("woff2"); }
+@font-face { font-family: "Commit Mono"; font-weight: 400; src: url(fonts/CommitMono-400-Regular.otf) format("opentype"); }
+@font-face { font-family: "Commit Mono"; font-weight: 700; src: url(fonts/CommitMono-700-Regular.otf) format("opentype"); }
+
+:root {
+  --font-text: "Inter", system-ui, sans-serif;     /* headlines 700, tracking -0.025em; text 400 */
+  --font-mono: "Commit Mono", ui-monospace, monospace;
+
+  --klein: #002fa7;          /* fill: cursor, buttons, bars; same in both themes */
+
+  --bg: #ffffff;
+  --panel: #f4f4f4;
+  --fg: #121212;
+  --grey: #636363;
+  --faint: #cfcfcf;
+  --blue: #002fa7;           /* blue text and links */
+  --on-klein: #ffffff;
+  --red: #ac3225;            /* errors and diff deletions only */
+  --green: #2b7440;          /* success and diff additions only */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0e0e;
+    --panel: #1b1b1b;
+    --fg: #e8e8e8;
+    --grey: #868686;
+    --faint: #3a3a3a;
+    --blue: #598df9;         /* Klein blue is 1.8:1 on black; same hue, lighter */
+    --red: #eb8373;
+    --green: #76be86;
+  }
+}

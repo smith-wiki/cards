@@ -1,0 +1,35 @@
+{%- set m = card.meta if card else meta -%}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ m.title }}{% if card %} · {{ site.name }}{% endif %}</title>
+<meta name="description" content="{{ m.description }}">
+{%- if m.canonical %}
+<link rel="canonical" href="{{ m.canonical }}">
+<meta property="og:url" content="{{ m.canonical }}">
+{%- endif %}
+<meta property="og:site_name" content="{{ site.name }}">
+<meta property="og:type" content="{{ m.type or 'website' }}">
+<meta property="og:title" content="{{ m.title }}">
+<meta property="og:description" content="{{ m.description }}">
+{%- if m.image %}
+<meta property="og:image" content="{{ m.image }}">
+<meta name="twitter:card" content="summary_large_image">
+{%- else %}
+<meta name="twitter:card" content="summary">
+{%- endif %}
+<link rel="preload" href="/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="mast"><a href="/">{{ site.name }}</a><nav><a href="/">cards</a><a href="{{ site.repository }}">source</a></nav></header>
+  <main>
+{{ content | safe }}
+  </main>
+</div>
+</body>
+</html>

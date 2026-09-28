@@ -1,0 +1,20 @@
+// Static-assets Worker for the Card site. Cloudflare Workers Builds runs
+// `npm run build` and deploys `_site` on every push to main; no secrets needed.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cards",
+  "compatibility_date": "2026-09-28",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "_site",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    {
+      "pattern": "cards.smith.wiki",
+      "custom_domain": true
+    }
+  ]
+}

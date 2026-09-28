@@ -1,0 +1,45 @@
+---
+layout: base.njk
+pagination:
+  data: cards
+  size: 1
+  alias: card
+permalink: "/{{ card.id }}/"
+---
+<article class="card">
+  {% set s = card %}{% include "stamp.njk" %}
+  <h1 class="hx{% if card.long %} long{% endif %}">{{ card.shortHtml | safe }}<i class="k" aria-hidden="true"></i></h1>
+  {%- if card.parent %}
+  <blockquote class="parent"><span class="label">in reply to</span><a href="{{ card.parent.url }}">{{ card.parent.textHtml | safe }}</a></blockquote>
+  {%- endif %}
+  {%- if card.images %}
+  <div class="images">
+    {%- for image in card.images %}
+    <figure><img src="{{ image.src }}" alt="{{ image.alt }}" loading="lazy"></figure>
+    {%- endfor %}
+  </div>
+  {%- endif %}
+  {%- if card.link %}
+  <a class="link" href="{{ card.link.url }}"><span class="title">{{ card.link.title }}</span>{% if card.link.description %}<span class="description">{{ card.link.description }}</span>{% endif %}<span class="url">{{ card.link.url }}</span></a>
+  {%- endif %}
+  {%- if card.articleHtml %}
+  <div class="article">
+{{ card.articleHtml | safe }}
+  </div>
+  {%- endif %}
+  {%- if card.bluesky %}
+  <p class="bluesky"><a href="{{ card.bluesky }}">on Bluesky</a></p>
+  {%- endif %}
+</article>
+{%- if card.replies.length %}
+<section>
+  <h2 class="label">Replies</h2>
+  {% set items = card.replies %}{% include "card-list.njk" %}
+</section>
+{%- endif %}
+{%- if card.mentionedBy.length %}
+<section>
+  <h2 class="label">Mentioned by</h2>
+  {% set items = card.mentionedBy %}{% include "card-list.njk" %}
+</section>
+{%- endif %}

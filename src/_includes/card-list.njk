@@ -1,0 +1,5 @@
+<ul class="cards">
+{%- for s in items %}
+  <li>{% include "stamp.njk" %}<p>{{ s.shortHtml | safe }}</p></li>
+{%- endfor %}
+</ul>

@@ -1,0 +1,78 @@
+/* Card site layout: the design system's post layout (masthead, stamp,
+   headline with the Klein block, running text) at web scale. Colors and fonts
+   come from tokens.css; both themes follow prefers-color-scheme. */
+
+* { box-sizing: border-box; }
+html { background: var(--bg); color: var(--fg); }
+body { margin: 0; font: 400 18px/1.6 var(--font-text); -webkit-text-size-adjust: 100%; }
+.wrap { max-width: 46rem; margin: 0 auto; padding: 32px 24px 96px; }
+
+a { color: var(--blue); text-underline-offset: .18em; text-decoration-thickness: .06em; }
+code, pre, kbd { font-family: var(--font-mono); font-variant-ligatures: none; }
+
+/* masthead */
+.mast { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; font: 800 17px/1 var(--font-mono); padding-bottom: 13px; border-bottom: 2px solid var(--fg); }
+.mast a { color: var(--fg); text-decoration: none; }
+.mast nav { display: flex; gap: 20px; font-weight: 400; font-size: 13px; }
+.mast nav a { color: var(--grey); }
+
+/* stamp: short monospace line above a headline, first item blue */
+.stamp { display: flex; flex-wrap: wrap; gap: 6px 17px; font: 400 13px/1.3 var(--font-mono); color: var(--grey); font-variant-ligatures: none; }
+.stamp > :first-child { color: var(--blue); }
+.stamp a { text-decoration: none; }
+.stamp a:hover { text-decoration: underline; }
+main > .stamp, .card > .stamp { margin-top: 48px; }
+
+/* headline with the Klein block */
+.hx { font-weight: 700; letter-spacing: -.025em; font-size: clamp(28px, 5.4vw, 40px); line-height: 1.1; margin: 12px 0 28px; overflow-wrap: break-word; }
+.hx.long { font-size: clamp(22px, 3.8vw, 28px); line-height: 1.25; }
+.hx a { color: var(--blue); }
+.k { display: inline-block; width: .5em; height: .8em; background: var(--klein); vertical-align: -.04em; margin-left: .08em; }
+@media (prefers-color-scheme: dark) { .k { background: var(--blue); } }
+
+.lead { color: var(--grey); margin: 0 0 32px; }
+.empty { font: 400 15px var(--font-mono); color: var(--grey); }
+
+/* parent quote */
+.parent { margin: 0 0 32px; padding: 2px 0 2px 18px; border-left: 4px solid var(--klein); font: 400 15px/1.5 var(--font-mono); }
+.parent .label { display: block; margin: 0 0 4px; color: var(--grey); }
+.parent a { color: var(--fg); text-decoration-color: var(--faint); }
+.parent a:hover { color: var(--blue); }
+
+/* Attachment: images */
+.images { display: grid; gap: 12px; margin: 0 0 32px; }
+.images figure { margin: 0; }
+.images img { display: block; max-width: 100%; height: auto; background: var(--panel); }
+
+/* Attachment: Link preview line */
+.link { display: grid; gap: 4px; margin: 0 0 32px; padding: 16px 20px; background: var(--panel); text-decoration: none; }
+.link .title { color: var(--fg); font-weight: 600; }
+.link .description { color: var(--grey); font-size: 16px; }
+.link .url { font: 400 13px/1.4 var(--font-mono); color: var(--blue); overflow-wrap: anywhere; }
+.link .url::before { content: "→ "; }
+
+/* Attachment: Article */
+.article { margin: 0 0 32px; }
+.article > :first-child { margin-top: 0; }
+.article p, .article ul, .article ol { margin: 0 0 20px; }
+.article h1, .article h2, .article h3, .article h4 { font-weight: 700; letter-spacing: -.02em; line-height: 1.2; margin: 40px 0 14px; }
+.article h1 { font-size: 28px; }
+.article h2 { font-size: 24px; }
+.article h3, .article h4 { font-size: 19px; }
+.article blockquote { margin: 28px 0; padding: 0 0 0 18px; border-left: 4px solid var(--klein); color: var(--fg); }
+.article code { font-size: .92em; background: var(--panel); padding: .1em .3em; }
+.article pre { background: var(--panel); padding: 16px 20px; overflow-x: auto; font-size: 15px; line-height: 1.5; }
+.article pre code { background: none; padding: 0; }
+.article hr { border: 0; border-top: 1px solid var(--faint); margin: 32px 0; }
+.article img { max-width: 100%; height: auto; }
+.article table { border-collapse: collapse; font-size: 16px; }
+.article th, .article td { border-bottom: 1px solid var(--faint); padding: 6px 12px 6px 0; text-align: left; }
+
+.bluesky { font: 400 13px var(--font-mono); margin: 0; }
+.bluesky a::before { content: "→ "; }
+
+/* Replies, Mentioned by, and the home list */
+h2.label { font: 400 13px/1 var(--font-mono); color: var(--grey); margin: 56px 0 0; padding-bottom: 12px; border-bottom: 2px solid var(--fg); }
+.cards { list-style: none; margin: 0; padding: 0; }
+.cards li { padding: 18px 0; border-bottom: 1px solid var(--faint); }
+.cards p { margin: 6px 0 0; overflow-wrap: break-word; }

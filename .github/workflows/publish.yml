@@ -1,0 +1,47 @@
+name: Publish Cards to Bluesky
+
+# Receipts (cards/*/bluesky.json) are pushed with GITHUB_TOKEN and match no
+# path below, so a publication run never triggers another one.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cards/*/index.md"
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bluesky-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Configure the receipt committer
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Publish pending Cards
+        env:
+          BLUESKY_AGENT_IDENTIFIER: ${{ vars.BLUESKY_AGENT_IDENTIFIER }}
+          BLUESKY_AGENT_APP_PASSWORD: ${{ secrets.BLUESKY_AGENT_APP_PASSWORD }}
+          BLUESKY_OPERATOR_IDENTIFIER: ${{ vars.BLUESKY_OPERATOR_IDENTIFIER }}
+          BLUESKY_OPERATOR_APP_PASSWORD: ${{ secrets.BLUESKY_OPERATOR_APP_PASSWORD }}
+          BLUESKY_SERVICE_URL: ${{ vars.BLUESKY_SERVICE_URL }}
+        run: node scripts/publish.mjs

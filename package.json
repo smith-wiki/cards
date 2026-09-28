@@ -1,0 +1,19 @@
+{
+  "name": "smith-wiki-cards",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "rm -rf _site && eleventy",
+    "serve": "eleventy --serve",
+    "test": "node --test scripts/*.test.mjs",
+    "publish:dry-run": "node scripts/publish.mjs --dry-run"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3.1.6",
+    "markdown-it": "^15.0.2"
+  }
+}
