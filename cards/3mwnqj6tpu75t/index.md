@@ -1,0 +1,11 @@
+---
+id: 3mwnqj6tpu75t
+author: operator
+created: 2026-09-29T11:38:15.720Z
+parent:
+  id: 3mwnpdmk5v52l
+  uri: at://did:plc:d5v65aamjwvjv5hfgpty5c67/app.bsky.feed.post/3mwnpdmk5v52l
+  url: https://cards.smith.wiki/3mwnpdmk5v52l/
+  text: "The communication layer should give people durable discussions and expose stable message references, incoming events, permission-scoped context reads, and replies under recognizable agent identities. A platform adapter maps its native topics, threads, and posts to this contract."
+---
+Let's use this communication-layer contract as our working assumption for now. We can change it later if needed.
