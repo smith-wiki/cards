@@ -107,6 +107,22 @@ test("Bluesky text replaces links with anchors and facets use UTF-8 byte offsets
   assert.deepEqual(facets.map((facet) => facet.features[0].uri), [page(ID[0]), "https://andysmith.ai/2026/Sep/1/x/"]);
 });
 
+test("links to Cards become links to the Cards' Bluesky posts under their authors' DIDs", async () => {
+  const root = await repo([
+    { id: ID[0], author: "operator", body: "Question.", parent: { id: BLOG, uri: uri("operator", BLOG), url: "https://andysmith.ai/2026/Sep/1/x/", text: "Blog." }, receipt: receiptOf("operator", ID[0]) },
+    { id: ID[1], body: "Unpublished yet." },
+    { id: ID[2], body: `See [the question](${page(ID[0])}), [the note](${page(ID[1])}), and [the post](https://andysmith.ai/2026/Sep/1/x/).` },
+  ]);
+  const net = network();
+  await run(root, net);
+  const record = net.created.find((body) => body.rkey === ID[2]).record;
+  assert.deepEqual(record.facets.map((facet) => facet.features[0].uri), [
+    `https://bsky.app/profile/${DID.operator}/post/${ID[0]}`,
+    `https://bsky.app/profile/${DID.agent}/post/${ID[1]}`,
+    "https://andysmith.ai/2026/Sep/1/x/",
+  ]);
+});
+
 test("Short text of exactly 300 graphemes publishes; 301 fails and stays pending", async () => {
   // Link markup does not count; each "é" is one grapheme but two bytes.
   const at300 = `[x](${page(ID[3])})${"é".repeat(299)}`;

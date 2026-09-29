@@ -23,6 +23,7 @@ import {
   blueskyText,
   cardPageUrl,
   graphemeLength,
+  linkedCardIds,
   loadCards,
 } from "../lib/cards.mjs";
 
@@ -339,8 +340,23 @@ export async function publish({
     return undefined;
   }
 
+  // Bluesky post URLs of the Cards a Short text links to, keyed by Card page URL.
+  // A post's URL is known before it exists: rkey = Card ID under the author's DID.
+  async function cardPostUrls(shortText) {
+    const urls = new Map();
+    for (const id of linkedCardIds(shortText)) {
+      const target = byId.get(id);
+      if (!target) continue;
+      const did = await accountFor(target.author).did();
+      urls.set(cardPageUrl(id), `https://bsky.app/profile/${did}/post/${id}`);
+    }
+    return urls;
+  }
+
   async function publishCard(card) {
-    const { text, facets } = blueskyText(card.shortText);
+    // Card links point at the Cards' posts, so Bluesky connects the posts, not the site.
+    const postUrls = await cardPostUrls(card.shortText);
+    const { text, facets } = blueskyText(card.shortText, (url) => postUrls.get(url) ?? url);
     const length = graphemeLength(text);
     if (length > SHORT_TEXT_MAX_GRAPHEMES) {
       throw new Error(`Short text is ${length} graphemes; Bluesky allows ${SHORT_TEXT_MAX_GRAPHEMES}`);

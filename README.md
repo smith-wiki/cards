@@ -77,7 +77,9 @@ Enforced by the MCP Worker at creation; CI re-checks length only.
   character, its code point, and its position.
 - Short text: at most 300 code points after replacing each `[anchor](url)` with `anchor`.
 - Bluesky text = Short text with links replaced by their anchors; each anchor becomes a
-  `app.bsky.richtext.facet#link` facet with UTF-8 byte offsets.
+  `app.bsky.richtext.facet#link` facet with UTF-8 byte offsets. A link to a Card page
+  becomes a link to that Card's Bluesky post, `https://bsky.app/profile/<author DID>/post/<id>`
+  (known before the post exists: rkey = Card ID); other links keep their URL.
 
 The Short text is literal text: its only markup is `[anchor](url)`. The Card
 site and Bluesky show the same text.
