@@ -21,10 +21,11 @@ import {
   SHORT_TEXT_MAX_GRAPHEMES,
   articleDescription,
   blueskyText,
+  cardPageId,
   cardPageUrl,
   graphemeLength,
-  linkedCardIds,
   loadCards,
+  shortTextSegments,
 } from "../lib/cards.mjs";
 
 const PUBLIC_API = "https://public.api.bsky.app";
@@ -340,15 +341,16 @@ export async function publish({
     return undefined;
   }
 
-  // Bluesky post URLs of the Cards a Short text links to, keyed by Card page URL.
+  // Bluesky post URLs of the Cards a Short text links to, keyed by the link's URL
+  // as written (Cards from before the host move link to cards.smith.wiki).
   // A post's URL is known before it exists: rkey = Card ID under the author's DID.
   async function cardPostUrls(shortText) {
     const urls = new Map();
-    for (const id of linkedCardIds(shortText)) {
-      const target = byId.get(id);
-      if (!target) continue;
+    for (const { url } of shortTextSegments(shortText)) {
+      const target = url && byId.get(cardPageId(url));
+      if (!target || urls.has(url)) continue;
       const did = await accountFor(target.author).did();
-      urls.set(cardPageUrl(id), `https://bsky.app/profile/${did}/post/${id}`);
+      urls.set(url, `https://bsky.app/profile/${did}/post/${target.id}`);
     }
     return urls;
   }

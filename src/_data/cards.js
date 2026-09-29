@@ -7,6 +7,7 @@ import {
   articleCardIds,
   articleDescription,
   cardIdCreated,
+  cardPageId,
   cardPageUrl,
   linkedCardIds,
   loadCards,
@@ -16,10 +17,10 @@ import {
 
 // Articles may cite external references; raw HTML is never passed through.
 const markdown = new MarkdownIt({ html: false, linkify: true });
-// Articles link to Cards as `card:<id>`; those become the Card's page on this site.
+// Articles link to Cards as `card:<id>` or by page URL; those become the Card's page on this site.
 const normalizeLink = markdown.normalizeLink.bind(markdown);
 markdown.normalizeLink = (url) => {
-  const id = url.startsWith("card:") ? url.slice(5) : null;
+  const id = url.startsWith("card:") ? url.slice(5) : cardPageId(url);
   return id && CARD_ID.test(id) ? `/${id}/` : normalizeLink(url);
 };
 // The Short text is the page's only h1; Article headings start at h2.
@@ -43,9 +44,14 @@ function textHtml(value) {
   return escapeHtml(value).replaceAll("\n", "<br>");
 }
 
+// Links to Card pages stay on this site, whichever host the Card file names.
 function shortTextHtml(shortText) {
   return shortTextSegments(shortText)
-    .map((segment) => (segment.url ? `<a href="${escapeHtml(segment.url)}">${textHtml(segment.text)}</a>` : textHtml(segment.text)))
+    .map((segment) => {
+      if (!segment.url) return textHtml(segment.text);
+      const id = cardPageId(segment.url);
+      return `<a href="${escapeHtml(id ? `/${id}/` : segment.url)}">${textHtml(segment.text)}</a>`;
+    })
     .join("");
 }
 

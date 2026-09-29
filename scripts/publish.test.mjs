@@ -18,7 +18,8 @@ const ENV = {
 };
 const ID = ["3m5xk2aaaaaa2", "3m5xk2aaaaaa3", "3m5xk2aaaaaa4", "3m5xk2aaaaaa5"];
 const BLOG = "3m4aaaaaaaaa2";
-const page = (id) => `https://cards.smith.wiki/${id}/`;
+const page = (id) => `https://andy.smith.wiki/${id}/`;
+const legacyPage = (id) => `https://cards.smith.wiki/${id}/`;
 const uri = (author, id) => `at://${DID[author]}/app.bsky.feed.post/${id}`;
 
 async function repo(cards) {
@@ -49,7 +50,7 @@ function network({ visible = {}, routes = {} } = {}) {
     for (const [prefix, handler] of Object.entries(routes)) {
       if (url.startsWith(prefix)) return handler(url, init);
     }
-    if (url.startsWith("https://cards.smith.wiki/")) throw new Error(`publication must not fetch Card pages: ${url}`);
+    if (/^https:\/\/(andy|cards)\.smith\.wiki\//.test(url)) throw new Error(`publication must not fetch Card pages: ${url}`);
     if (url.endsWith("/com.atproto.server.createSession")) {
       const { identifier } = JSON.parse(init.body);
       const author = identifier.split(".")[0];
@@ -111,7 +112,7 @@ test("links to Cards become links to the Cards' Bluesky posts under their author
   const root = await repo([
     { id: ID[0], author: "operator", body: "Question.", parent: { id: BLOG, uri: uri("operator", BLOG), url: "https://andysmith.ai/2026/Sep/1/x/", text: "Blog." }, receipt: receiptOf("operator", ID[0]) },
     { id: ID[1], body: "Unpublished yet." },
-    { id: ID[2], body: `See [the question](${page(ID[0])}), [the note](${page(ID[1])}), and [the post](https://andysmith.ai/2026/Sep/1/x/).` },
+    { id: ID[2], body: `See [the question](${page(ID[0])}), [the note](${legacyPage(ID[1])}), and [the post](https://andysmith.ai/2026/Sep/1/x/).` },
   ]);
   const net = network();
   await run(root, net);
