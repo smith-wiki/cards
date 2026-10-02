@@ -246,10 +246,12 @@ export class BlueskyClient {
     });
     const uploadPayload = await uploadResponse.json().catch(() => null);
     // The service answers with the JobStatus itself or wrapped in { jobStatus }.
-    // A blob means done, even on an error: `already_exists` returns the earlier blob.
+    // A blob means done. A video it has processed before (same bytes, same account)
+    // answers 409 `already_exists` with that job's id but no blob; the job's status has it.
     let job = uploadPayload?.jobStatus ?? uploadPayload;
     if (!job?.blob) {
-      if (!uploadResponse.ok || typeof job?.jobId !== "string") {
+      const reusable = uploadResponse.status === 409 && job?.error === "already_exists";
+      if ((!uploadResponse.ok && !reusable) || typeof job?.jobId !== "string") {
         const detail = xrpcDetail(job);
         throw new Error(`video ${src}: upload failed: HTTP ${uploadResponse.status}${detail ? ` ${detail}` : ""}`);
       }

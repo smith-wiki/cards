@@ -286,7 +286,7 @@ test("the video aspect ratio comes from the first sized track header, rotation-a
 });
 
 /** The video service, the author's PDS (from the session's DID document), and the video file. */
-function videoNetwork(jobStatuses) {
+function videoNetwork(jobStatuses, uploadAnswer = Response.json({ jobId: "job-1", did: DID.agent, state: "JOB_STATE_CREATED" })) {
   const pds = "https://pds.example.com";
   const polls = [];
   const net = network({
@@ -311,7 +311,7 @@ function videoNetwork(jobStatuses) {
         assert.equal(init.headers["Content-Type"], "video/mp4");
         assert.equal(query.get("did"), DID.agent);
         assert.equal(query.get("name"), `${ID[0]}.mp4`);
-        return Response.json({ jobId: "job-1", did: DID.agent, state: "JOB_STATE_CREATED" });
+        return uploadAnswer;
       },
       "https://video.bsky.app/xrpc/app.bsky.video.getJobStatus?jobId=job-1": () => {
         polls.push(jobStatuses[polls.length]);
@@ -350,6 +350,19 @@ test("a failed video processing job leaves the Card pending", async () => {
   assert.equal(net.created.length, 0);
   assert.equal(store.saved.length, 0);
   assert.match(lines.join("\n"), /Video too long/);
+});
+
+test("a video the service processed before (409 already_exists) posts the earlier job's blob", async () => {
+  const root = await repo([{ id: ID[0], body: "Again.", video: { src: "https://files.smith.wiki/cards/v.mp4", mime: "video/mp4", alt: "The demo" } }]);
+  // The shape video.bsky.app sends: the earlier job's id, completed, but no blob.
+  const conflict = Response.json(
+    { jobId: "job-1", did: DID.agent, state: "JOB_STATE_COMPLETED", error: "already_exists", message: "Video already processed" },
+    { status: 409 },
+  );
+  const { net } = videoNetwork([{ state: "JOB_STATE_COMPLETED", blob: VIDEO_BLOB, error: "already_exists" }], conflict);
+  const { result } = await run(root, net);
+  assert.deepEqual(result.published, [ID[0]]);
+  assert.deepEqual(net.created[0].record.embed.video, VIDEO_BLOB);
 });
 
 test("an HTML page previews the Card page with the page's title and description", async () => {
