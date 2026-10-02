@@ -129,6 +129,8 @@ export default async function () {
       long: Array.from(plain).length > 140,
       parent: card.parent ? parentSummary(card.parent) : null,
       images: card.images?.map((image) => ({ src: image.src, alt: image.alt ?? "" })) ?? null,
+      video: card.video && { src: card.video.src, mime: card.video.mime || "", alt: card.video.alt ?? "" },
+      html: card.html && { src: card.html.src, title: card.html.title || host(card.html.src), description: card.html.description || "" },
       link: card.link && {
         url: card.link.url,
         title: card.link.title || host(card.link.url),

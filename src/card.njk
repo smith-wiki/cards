@@ -16,6 +16,16 @@ permalink: "/{{ card.id }}/"
     {%- endfor %}
   </div>
   {%- endif %}
+  {%- if card.video %}
+  <figure class="video"><video controls preload="metadata" src="{{ card.video.src }}" aria-label="{{ card.video.alt }}" title="{{ card.video.alt }}">{{ card.video.alt }} <a href="{{ card.video.src }}">Download the video</a></video></figure>
+  {%- endif %}
+  {%- if card.html %}
+  <figure class="page">
+    {#- The page is untrusted third-party HTML: its scripts run, but never with this site's origin (no allow-same-origin). #}
+    <iframe sandbox="allow-scripts" src="{{ card.html.src }}" title="{{ card.html.title }}" loading="lazy" referrerpolicy="no-referrer"></iframe>
+    <figcaption><span class="title">{{ card.html.title }}</span>{% if card.html.description %}<span class="description">{{ card.html.description }}</span>{% endif %}<a class="url" href="{{ card.html.src }}" rel="noopener">Open the page</a></figcaption>
+  </figure>
+  {%- endif %}
   {%- if card.link %}
   <a class="link" href="{{ card.link.url }}"><span class="title">{{ card.link.title }}</span>{% if card.link.description %}<span class="description">{{ card.link.description }}</span>{% endif %}<span class="url">{{ card.link.url }}</span></a>
   {%- endif %}

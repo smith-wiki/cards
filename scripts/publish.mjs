@@ -34,6 +34,16 @@ const USER_AGENT = "smith-wiki-cards-publisher";
 const IMAGE_MAX_BYTES = 1_000_000;
 const THUMB_MAX_BYTES = 1_000_000;
 const FETCH_TIMEOUT_MS = 15_000;
+// Videos go through Bluesky's video service, which processes them before the
+// post exists, so the post never shows a missing video.
+const VIDEO_SERVICE = "https://video.bsky.app";
+/** The app.bsky.embed.video blob limit. */
+const VIDEO_MAX_BYTES = 100_000_000;
+const VIDEO_FETCH_TIMEOUT_MS = 5 * 60_000;
+const VIDEO_POLL_MS = 2_000;
+/** About ten minutes of processing; then the Card stays pending and is retried next run. */
+const VIDEO_MAX_POLLS = (10 * 60_000) / VIDEO_POLL_MS;
+const VIDEO_EXTENSIONS = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };
 /** Title of an Article Card's link preview; the post's text already carries the Short text. */
 export const ARTICLE_PREVIEW_TITLE = "Read more";
 const AUTHORS = { agent: "AGENT", operator: "OPERATOR" };
@@ -41,6 +51,50 @@ const AUTHORS = { agent: "AGENT", operator: "OPERATOR" };
 function errorMessage(error) {
   const message = error instanceof Error ? error.message : String(error);
   return message.replace(/[\r\n]+/g, " ").slice(0, 500);
+}
+
+const sleepFor = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Display size of an MP4/QuickTime video, `{ width, height }`, from the first
+ * track header (moov > trak > tkhd) with a nonzero size; null when there is
+ * none (e.g. WebM). A 90/270-degree rotation matrix swaps width and height,
+ * because Bluesky wants the size as shown.
+ */
+export function mp4AspectRatio(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  function* boxes(start, end) {
+    for (let offset = start; offset + 8 <= end; ) {
+      let size = view.getUint32(offset);
+      let header = 8;
+      if (size === 1) {
+        if (offset + 16 > end) return;
+        size = Number(view.getBigUint64(offset + 8));
+        header = 16;
+      } else if (size === 0) {
+        size = end - offset;
+      }
+      if (size < header || offset + size > end) return;
+      yield { type: String.fromCharCode(...bytes.subarray(offset + 4, offset + 8)), start: offset + header, end: offset + size };
+      offset += size;
+    }
+  }
+  const children = (box, type) => Array.from(boxes(box.start, box.end)).filter((child) => child.type === type);
+  for (const moov of children({ start: 0, end: bytes.byteLength }, "moov")) {
+    for (const trak of children(moov, "trak")) {
+      for (const tkhd of children(trak, "tkhd")) {
+        // Version 1 widens the creation/modification times and duration to 64 bits.
+        const matrix = tkhd.start + (bytes[tkhd.start] === 1 ? 52 : 40);
+        if (matrix + 44 > tkhd.end) continue;
+        let width = Math.round(view.getUint32(matrix + 36) / 65536);
+        let height = Math.round(view.getUint32(matrix + 40) / 65536);
+        if (width < 1 || height < 1) continue;
+        if (view.getInt32(matrix) === 0 && view.getInt32(matrix + 16) === 0) [width, height] = [height, width];
+        return { width, height };
+      }
+    }
+  }
+  return null;
 }
 
 function decodeEntities(value) {
@@ -81,6 +135,27 @@ async function fetchImage(fetchImpl, url, maxBytes, mime) {
   return { bytes, type };
 }
 
+/** Downloads a video and checks its type and size. */
+async function fetchVideo(fetchImpl, url, mime) {
+  const response = await fetchImpl(url, {
+    headers: { "User-Agent": USER_AGENT },
+    signal: AbortSignal.timeout(VIDEO_FETCH_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new Error(`video ${url}: HTTP ${response.status}`);
+  const type = mime || (response.headers.get("content-type") || "").split(";", 1)[0].trim();
+  if (!type.startsWith("video/")) throw new Error(`video ${url}: not a video (${type || "no type"})`);
+  // Refuse before downloading when the server says it is too large.
+  const declared = Number(response.headers.get("content-length"));
+  if (declared > VIDEO_MAX_BYTES) throw new Error(`video ${url}: ${declared} bytes exceeds ${VIDEO_MAX_BYTES}`);
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength > VIDEO_MAX_BYTES) throw new Error(`video ${url}: ${bytes.byteLength} bytes exceeds ${VIDEO_MAX_BYTES}`);
+  return { bytes, type };
+}
+
+function xrpcDetail(payload) {
+  return [payload?.error, payload?.message].filter(Boolean).join(": ");
+}
+
 class BlueskyError extends Error {
   constructor(message, status, error) {
     super(message);
@@ -91,11 +166,12 @@ class BlueskyError extends Error {
 
 /** One Bluesky account: the Card author's. */
 export class BlueskyClient {
-  constructor({ identifier, appPassword, serviceUrl, fetchImpl = fetch }) {
+  constructor({ identifier, appPassword, serviceUrl, fetchImpl = fetch, sleep = sleepFor }) {
     this.identifier = identifier;
     this.appPassword = appPassword;
     this.serviceUrl = (serviceUrl || "https://bsky.social").replace(/\/+$/, "");
     this.fetch = fetchImpl;
+    this.sleep = sleep;
     this.session = null;
   }
 
@@ -129,6 +205,70 @@ export class BlueskyClient {
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.blob) throw new Error(`image ${url}: upload failed: HTTP ${response.status}`);
     return payload.blob;
+  }
+
+  /**
+   * Sends a video through Bluesky's video service and waits until it is
+   * processed. Returns `{ blob, aspectRatio }`; aspectRatio is null when the
+   * container does not say (e.g. WebM).
+   */
+  async uploadVideo({ src, mime }, name) {
+    const { bytes, type } = await fetchVideo(this.fetch, src, mime);
+    const session = await this.authenticate();
+    // The video service stores the processed video on the author's PDS, so the
+    // service token is addressed to that PDS (not the entryway that issued the session).
+    const pds = (
+      session.didDoc?.service?.find((service) => typeof service?.id === "string" && service.id.endsWith("#atproto_pds"))?.serviceEndpoint ||
+      this.serviceUrl
+    ).replace(/\/+$/, "");
+    const auth = new URLSearchParams({
+      aud: `did:web:${new URL(pds).host}`,
+      lxm: "com.atproto.repo.uploadBlob",
+      exp: String(Math.floor(Date.now() / 1000) + 30 * 60),
+    });
+    const authResponse = await this.fetch(`${pds}/xrpc/com.atproto.server.getServiceAuth?${auth}`, {
+      headers: { Authorization: `Bearer ${session.accessJwt}` },
+    });
+    const authPayload = await authResponse.json().catch(() => null);
+    if (!authResponse.ok || typeof authPayload?.token !== "string") {
+      const detail = xrpcDetail(authPayload);
+      throw new Error(`video ${src}: service auth failed: HTTP ${authResponse.status}${detail ? ` ${detail}` : ""}`);
+    }
+
+    const upload = new URLSearchParams({ did: session.did, name });
+    const uploadResponse = await this.fetch(`${VIDEO_SERVICE}/xrpc/app.bsky.video.uploadVideo?${upload}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${authPayload.token}`, "Content-Type": type },
+      body: bytes,
+      signal: AbortSignal.timeout(VIDEO_FETCH_TIMEOUT_MS),
+    });
+    const uploadPayload = await uploadResponse.json().catch(() => null);
+    // The service answers with the JobStatus itself or wrapped in { jobStatus }.
+    // A blob means done, even on an error: `already_exists` returns the earlier blob.
+    let job = uploadPayload?.jobStatus ?? uploadPayload;
+    if (!job?.blob) {
+      if (!uploadResponse.ok || typeof job?.jobId !== "string") {
+        const detail = xrpcDetail(job);
+        throw new Error(`video ${src}: upload failed: HTTP ${uploadResponse.status}${detail ? ` ${detail}` : ""}`);
+      }
+      const jobId = job.jobId;
+      for (let poll = 0; !job?.blob; poll++) {
+        if (poll === VIDEO_MAX_POLLS) throw new Error(`video ${src}: still processing after ${(VIDEO_MAX_POLLS * VIDEO_POLL_MS) / 60_000} minutes`);
+        await this.sleep(VIDEO_POLL_MS);
+        const response = await this.fetch(`${VIDEO_SERVICE}/xrpc/app.bsky.video.getJobStatus?${new URLSearchParams({ jobId })}`, {
+          headers: { "User-Agent": USER_AGENT },
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        });
+        const payload = await response.json().catch(() => null);
+        job = payload?.jobStatus;
+        if (job?.blob) break;
+        if (!response.ok || job?.state === "JOB_STATE_FAILED") {
+          const detail = xrpcDetail(job ?? payload);
+          throw new Error(`video ${src}: processing failed: HTTP ${response.status}${detail ? ` ${detail}` : ""}`);
+        }
+      }
+    }
+    return { blob: job.blob, aspectRatio: mp4AspectRatio(bytes) };
   }
 
   async createPost(rkey, record) {
@@ -173,6 +313,11 @@ class DryRunClient {
   async uploadImage(url, _maxBytes, mime) {
     return { $type: "blob", ref: { $link: "dry-run" }, mimeType: mime || "image/*", size: 0, source: url };
   }
+
+  // A dry run never downloads the video: the record shows where it would come from.
+  async uploadVideo({ src, mime }) {
+    return { blob: { $type: "blob", ref: { $link: "dry-run" }, mimeType: mime || "video/*", size: 0, source: src }, aspectRatio: null };
+  }
 }
 
 /** Writes each receipt once, commits it, and pushes it to the remote. */
@@ -203,7 +348,7 @@ export class GitReceiptStore {
   }
 }
 
-function clientsFromEnv(env, fetchImpl) {
+function clientsFromEnv(env, fetchImpl, sleep) {
   const clients = {};
   return (author) => {
     if (clients[author]) return clients[author];
@@ -213,7 +358,7 @@ function clientsFromEnv(env, fetchImpl) {
     if (!identifier || !appPassword) {
       throw new Error(`BLUESKY_${key}_IDENTIFIER and BLUESKY_${key}_APP_PASSWORD are required to publish ${author} Cards`);
     }
-    clients[author] = new BlueskyClient({ identifier, appPassword, serviceUrl: env.BLUESKY_SERVICE_URL, fetchImpl });
+    clients[author] = new BlueskyClient({ identifier, appPassword, serviceUrl: env.BLUESKY_SERVICE_URL, fetchImpl, sleep });
     return clients[author];
   };
 }
@@ -227,8 +372,10 @@ export async function publish({
   root = process.cwd(),
   env = process.env,
   fetchImpl = fetch,
+  // Waits between video processing polls; tests pass one that returns at once.
+  sleep = sleepFor,
   store = new GitReceiptStore({ root }),
-  clientFor = clientsFromEnv(env, fetchImpl),
+  clientFor = clientsFromEnv(env, fetchImpl, sleep),
   dryRun = false,
   now = () => Date.now(),
   log = console.log,
@@ -315,6 +462,19 @@ export async function publish({
         images.push({ image: await client.uploadImage(image.src, IMAGE_MAX_BYTES, image.mime), alt: image.alt });
       }
       return { $type: "app.bsky.embed.images", images };
+    }
+    if (card.video) {
+      const mime = card.video.mime || "";
+      const extension = VIDEO_EXTENSIONS[mime] || /\.(\w+)$/.exec(new URL(card.video.src).pathname)?.[1] || "mp4";
+      const { blob, aspectRatio } = await client.uploadVideo(card.video, `${card.id}.${extension}`);
+      return { $type: "app.bsky.embed.video", video: blob, alt: card.video.alt, ...(aspectRatio ? { aspectRatio } : {}) };
+    }
+    if (card.html) {
+      // Bluesky cannot show the page itself; the Card page shows it, sandboxed.
+      return {
+        $type: "app.bsky.embed.external",
+        external: { uri: cardPageUrl(card.id), title: card.html.title, description: card.html.description || "" },
+      };
     }
     if (card.link) {
       const meta = await linkMetadata(card.link.url);

@@ -49,13 +49,21 @@ images:                               # optional Attachment: 1-4 images
   - src: https://files.smith.wiki/cards/<sha256>.jpg
     alt: "Required English alt text"
     mime: image/jpeg
+video:                                # optional Attachment: one video
+  src: https://files.smith.wiki/cards/<uuid>.mp4
+  mime: video/mp4                     # video/mp4 | video/webm | video/quicktime
+  alt: "English description of the video"  # required, at most 1000 characters
+html:                                 # optional Attachment: one self-contained HTML page
+  src: https://files.smith.wiki/cards/<sha256>.html
+  title: "English title"              # required
+  description: "English description"  # optional
 article: true                         # optional Attachment: Article, body in article.md
 ---
 Short text in Markdown with only inline links to Cards, e.g.
 see [the earlier finding](https://andy.smith.wiki/3m5xj.../).
 ```
 
-Exactly zero or one of `link`, `images`, `article` is present. Operator Cards never have `article`
+Exactly zero or one of `link`, `images`, `article`, `video`, `html` is present. Operator Cards never have `article`
 and always have `parent`. Links in the body are absolute URLs of Card pages
 (`https://andy.smith.wiki/<id>/`) or blog post URLs (blog Cards); nothing else. Cards written
 before the site moved link to `https://cards.smith.wiki/<id>/`; both hosts count as Card
@@ -96,6 +104,9 @@ site and Bluesky show the same text.
 - `/<id>/` for every Card: stamp line (Card ID, which is also its Bluesky
   record key, then date, author, `reply`, reply count), the Short text as the
   headline, the Attachment, and a link to the Bluesky post once published;
+  a video plays in a `<video>` player, and an HTML page runs in an
+  `<iframe sandbox="allow-scripts">` — never `allow-same-origin`, because the
+  page is untrusted HTML — with its title, description, and an `Open the page` link;
 - `/404.html`.
 
 Every page has a right sidebar (below the content on narrow screens), for
@@ -138,7 +149,13 @@ For each pending Card (no `bluesky.json`), in ascending Card ID order:
    `app.bsky.feed.getPosts` (root = the parent's own reply root, or the parent).
    A parent that is not visible yet defers the Card to the next run.
 3. The Attachment becomes the embed: images are uploaded as blobs with their
-   alt text; a Link becomes an external preview from cardyb, falling back to the
+   alt text; a video (at most 100,000,000 bytes) is sent to the video service
+   `video.bsky.app` with a service token for the author's PDS, polled until
+   processed (about ten minutes at most), and embedded with its alt text and
+   the aspect ratio read from the MP4/QuickTime track header (none for WebM);
+   an HTML page becomes an external preview of the Card page (which shows the
+   page sandboxed) with the page's title and description, no thumb; a Link
+   becomes an external preview from cardyb, falling back to the
    page's OpenGraph tags, with frontmatter title/description winning and a thumb
    of at most 1,000,000 bytes; an Article becomes an external preview of the
    Card page: title `Read more` (the post already shows the Short text),

@@ -7,7 +7,7 @@ import test from "node:test";
 import { promisify } from "node:util";
 import YAML from "yaml";
 import { articleDescription, blueskyText } from "../lib/cards.mjs";
-import { GitReceiptStore, publish } from "./publish.mjs";
+import { GitReceiptStore, mp4AspectRatio, publish } from "./publish.mjs";
 
 const DID = { agent: "did:plc:agent", operator: "did:plc:operator" };
 const ENV = {
@@ -88,6 +88,7 @@ async function run(root, net, options = {}) {
     store,
     log: (line) => lines.push(line),
     now: () => Date.parse("2026-09-28T15:00:00Z"),
+    sleep: async () => {},
     ...options,
   });
   return { result, store, lines };
@@ -245,6 +246,125 @@ test("images upload each file and keep alt text", async () => {
       { image: { $type: "blob", ref: { $link: "blob-20" }, mimeType: "image/jpeg", size: 20 }, alt: "Second chart" },
     ],
   });
+});
+
+// A minimal MP4: boxes nested as given, with track headers of the given size.
+function box(type, ...parts) {
+  const body = Buffer.concat(parts.map((part) => Buffer.from(part)));
+  const header = Buffer.alloc(8);
+  header.writeUInt32BE(8 + body.length);
+  header.write(type, 4, "latin1");
+  return Buffer.concat([header, body]);
+}
+
+function tkhd({ version = 0, width, height, rotated = false }) {
+  const times = version === 1 ? 32 : 20;
+  const body = Buffer.alloc(4 + times + 16 + 36 + 8);
+  body[0] = version;
+  const matrix = 4 + times + 16;
+  // 90 degrees: a = 0, b = 1, c = -1, d = 0; identity otherwise (16.16, w = 1 in 2.30).
+  const [a, b, c, d] = rotated ? [0, 0x10000, -0x10000, 0] : [0x10000, 0, 0, 0x10000];
+  body.writeInt32BE(a, matrix);
+  body.writeInt32BE(b, matrix + 4);
+  body.writeInt32BE(c, matrix + 12);
+  body.writeInt32BE(d, matrix + 16);
+  body.writeInt32BE(0x40000000, matrix + 32);
+  body.writeUInt32BE(width * 0x10000, matrix + 36);
+  body.writeUInt32BE(height * 0x10000, matrix + 40);
+  return box("tkhd", body);
+}
+
+// moov after mdat, as many encoders write it; one trak per track header.
+const mp4 = (...tracks) =>
+  new Uint8Array(Buffer.concat([box("ftyp", "isom"), box("mdat", Buffer.alloc(16)), box("moov", box("mvhd", Buffer.alloc(100)), ...tracks.map((track) => box("trak", track)))]));
+
+test("the video aspect ratio comes from the first sized track header, rotation-aware", () => {
+  // An audio track (0 x 0) comes first; the video track is version 1.
+  assert.deepEqual(mp4AspectRatio(mp4(tkhd({ width: 0, height: 0 }), tkhd({ version: 1, width: 1920, height: 1080 }))), { width: 1920, height: 1080 });
+  assert.deepEqual(mp4AspectRatio(mp4(tkhd({ width: 1920, height: 1080, rotated: true }))), { width: 1080, height: 1920 });
+  assert.equal(mp4AspectRatio(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0x9f, 0x42, 0x86, 0x81, 0x01])), null);
+});
+
+/** The video service, the author's PDS (from the session's DID document), and the video file. */
+function videoNetwork(jobStatuses) {
+  const pds = "https://pds.example.com";
+  const polls = [];
+  const net = network({
+    routes: {
+      "https://bsky.social/xrpc/com.atproto.server.createSession": () =>
+        Response.json({
+          accessJwt: "jwt-agent",
+          did: DID.agent,
+          didDoc: { id: DID.agent, service: [{ id: "#atproto_pds", type: "AtprotoPersonalDataServer", serviceEndpoint: pds }] },
+        }),
+      "https://files.smith.wiki/cards/v.mp4": () => new Response(mp4(tkhd({ width: 1280, height: 720 }))),
+      [`${pds}/xrpc/com.atproto.server.getServiceAuth`]: (url, init) => {
+        const query = new URL(url).searchParams;
+        assert.equal(init.headers.Authorization, "Bearer jwt-agent");
+        assert.equal(query.get("aud"), "did:web:pds.example.com");
+        assert.equal(query.get("lxm"), "com.atproto.repo.uploadBlob");
+        return Response.json({ token: "service-token" });
+      },
+      "https://video.bsky.app/xrpc/app.bsky.video.uploadVideo": (url, init) => {
+        const query = new URL(url).searchParams;
+        assert.equal(init.headers.Authorization, "Bearer service-token");
+        assert.equal(init.headers["Content-Type"], "video/mp4");
+        assert.equal(query.get("did"), DID.agent);
+        assert.equal(query.get("name"), `${ID[0]}.mp4`);
+        return Response.json({ jobId: "job-1", did: DID.agent, state: "JOB_STATE_CREATED" });
+      },
+      "https://video.bsky.app/xrpc/app.bsky.video.getJobStatus?jobId=job-1": () => {
+        polls.push(jobStatuses[polls.length]);
+        return Response.json({ jobStatus: { jobId: "job-1", did: DID.agent, ...jobStatuses[polls.length - 1] } });
+      },
+    },
+  });
+  return { net, polls };
+}
+
+const VIDEO_BLOB = { $type: "blob", ref: { $link: "bafkvideo" }, mimeType: "video/mp4", size: 1234 };
+
+test("a video is processed by the video service and posts its blob with alt text and aspect ratio", async () => {
+  const root = await repo([{ id: ID[0], body: "A demo.", video: { src: "https://files.smith.wiki/cards/v.mp4", mime: "video/mp4", alt: "The demo" } }]);
+  const { net, polls } = videoNetwork([
+    { state: "JOB_STATE_ENCODING", progress: 40 },
+    { state: "JOB_STATE_COMPLETED", blob: VIDEO_BLOB },
+  ]);
+  const { result, store } = await run(root, net);
+  assert.equal(polls.length, 2);
+  assert.deepEqual(net.created[0].record.embed, {
+    $type: "app.bsky.embed.video",
+    video: VIDEO_BLOB,
+    alt: "The demo",
+    aspectRatio: { width: 1280, height: 720 },
+  });
+  assert.deepEqual(result.published, [ID[0]]);
+  assert.equal(store.saved.length, 1);
+});
+
+test("a failed video processing job leaves the Card pending", async () => {
+  const root = await repo([{ id: ID[0], body: "A demo.", video: { src: "https://files.smith.wiki/cards/v.mp4", mime: "video/mp4", alt: "The demo" } }]);
+  const { net } = videoNetwork([{ state: "JOB_STATE_FAILED", error: "Video too long" }]);
+  const { result, store, lines } = await run(root, net);
+  assert.deepEqual(result.failed, [ID[0]]);
+  assert.equal(net.created.length, 0);
+  assert.equal(store.saved.length, 0);
+  assert.match(lines.join("\n"), /Video too long/);
+});
+
+test("an HTML page previews the Card page with the page's title and description", async () => {
+  const root = await repo([
+    { id: ID[0], body: "A toy.", html: { src: "https://files.smith.wiki/cards/t.html", title: "Toy", description: "A small toy" } },
+    { id: ID[1], body: "Another toy.", html: { src: "https://files.smith.wiki/cards/u.html", title: "Other toy" } },
+  ]);
+  const net = network();
+  await run(root, net);
+  assert.deepEqual(net.created[0].record.embed, {
+    $type: "app.bsky.embed.external",
+    external: { uri: page(ID[0]), title: "Toy", description: "A small toy" },
+  });
+  assert.deepEqual(net.created[1].record.embed.external, { uri: page(ID[1]), title: "Other toy", description: "" });
+  assert.equal(net.calls.some((call) => call.url.includes(".html")), false);
 });
 
 test("a Link falls back to OpenGraph tags, frontmatter overrides win, and an oversized thumb is dropped", async () => {
