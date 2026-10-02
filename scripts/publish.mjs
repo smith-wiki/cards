@@ -49,7 +49,9 @@ export const ARTICLE_PREVIEW_TITLE = "Read more";
 const AUTHORS = { agent: "AGENT", operator: "OPERATOR" };
 
 function errorMessage(error) {
-  const message = error instanceof Error ? error.message : String(error);
+  let message = error instanceof Error ? error.message : String(error);
+  // Node's fetch says only "fetch failed"; the cause names the host and the reason (e.g. ENOTFOUND).
+  if (error instanceof Error && error.cause instanceof Error) message += `: ${error.cause.message}`;
   return message.replace(/[\r\n]+/g, " ").slice(0, 500);
 }
 
