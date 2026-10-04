@@ -1,0 +1,7 @@
+Hermes Kanban supports wake-only task subscriptions through a live gateway. This resumes the destination agent without a passive notification. The resulting model turn can still produce a reply.
+
+Headless workers should record the context with `kanban_comment` and use `kanban_block` for genuine blockers. Hermes' injected worker protocol discourages `clarify` in a headless run because no live user can answer. Completed work should leave a summary and structured handoff evidence; a reviewer can return changes through the review lifecycle.
+
+The operator's escalation requirement is a proposed behavioral policy, not an automatic consequence of enabling Kanban. Put it in the planner's `SOUL.md`: process outcomes, investigate uncertainty by assigning more work, resolve choices supported by the available context, and ask the operator only if the decision cannot be made. A blocker should first become an orchestration decision. Wake-only delivery removes the passive ping, not the need to specify that policy.
+
+Sources: [Kanban delivery modes](https://hermes-agent.nousresearch.com/docs/user-guide/features/kanban#gateway-notifications), [Multi-gateway routing](https://hermes-agent.nousresearch.com/docs/user-guide/features/kanban-multi-gateway), [Injected worker protocol](https://github.com/NousResearch/hermes-agent/blob/main/agent/prompt_builder.py), [Review and handoff lifecycle](https://hermes-agent.nousresearch.com/docs/user-guide/features/kanban-worker-lanes).
