@@ -9,8 +9,8 @@ This repository holds:
   (`https://cards-mcp.smith.wiki/mcp`) through the GitHub API;
 - the Card site, built with Eleventy and served by GitHub Pages at
   `https://old.smith.wiki` (first served at `cards.smith.wiki`, then at
-  `andy.smith.wiki`; both redirect here from `smith-wiki/cards-redirect` and
-  `smith-wiki/andy-redirect`);
+  `andy.smith.wiki`; both redirect here, from `smith-wiki/cards-redirect` and
+  the `redirects` list of `smith-wiki/andy-smith-wiki`);
 - the workflow that builds and deploys the site, then publishes each Card to
   its author's Bluesky account.
 
