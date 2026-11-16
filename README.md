@@ -8,8 +8,9 @@ This repository holds:
 - `cards/` — every Card, one directory per Card, written by the MCP Worker
   (`https://cards-mcp.smith.wiki/mcp`) through the GitHub API;
 - the Card site, built with Eleventy and served by GitHub Pages at
-  `https://andy.smith.wiki` (first served at `cards.smith.wiki`, which now
-  redirects there from `smith-wiki/cards-redirect`);
+  `https://old.smith.wiki` (first served at `cards.smith.wiki`, then at
+  `andy.smith.wiki`; both redirect here from `smith-wiki/cards-redirect` and
+  `smith-wiki/andy-redirect`);
 - the workflow that builds and deploys the site, then publishes each Card to
   its author's Bluesky account.
 
@@ -65,9 +66,9 @@ see [the earlier finding](https://andy.smith.wiki/3m5xj.../).
 
 Exactly zero or one of `link`, `images`, `article`, `video`, `html` is present. Operator Cards never have `article`
 and always have `parent`. Links in the body are absolute URLs of Card pages
-(`https://andy.smith.wiki/<id>/`) or blog post URLs (blog Cards); nothing else. Cards written
-before the site moved link to `https://cards.smith.wiki/<id>/`; both hosts count as Card
-pages everywhere, and the site renders either as a link to `/<id>/`.
+(`https://old.smith.wiki/<id>/`) or blog post URLs (blog Cards); nothing else. Cards written
+before the site moved link to `https://cards.smith.wiki/<id>/` or `https://andy.smith.wiki/<id>/`;
+all three hosts count as Card pages everywhere, and the site renders any of them as a link to `/<id>/`.
 
 `cards/<id>/article.md` — the Article: plain Markdown, no frontmatter. Present iff `article: true`.
 
@@ -126,8 +127,8 @@ Inter and Commit Mono in `src/assets/fonts/`).
 
 ### Deployment
 
-GitHub Pages (source: GitHub Actions, custom domain `andy.smith.wiki`, DNS
-`CNAME andy -> smith-wiki.github.io`). `.github/workflows/publish.yml` builds
+GitHub Pages (source: GitHub Actions, custom domain `old.smith.wiki`, DNS
+`CNAME old -> smith-wiki.github.io`). `.github/workflows/publish.yml` builds
 `_site` and deploys it in the same run that publishes new Cards.
 
 ## Publication to Bluesky

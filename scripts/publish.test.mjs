@@ -18,7 +18,7 @@ const ENV = {
 };
 const ID = ["3m5xk2aaaaaa2", "3m5xk2aaaaaa3", "3m5xk2aaaaaa4", "3m5xk2aaaaaa5"];
 const BLOG = "3m4aaaaaaaaa2";
-const page = (id) => `https://andy.smith.wiki/${id}/`;
+const page = (id) => `https://old.smith.wiki/${id}/`;
 const legacyPage = (id) => `https://cards.smith.wiki/${id}/`;
 const uri = (author, id) => `at://${DID[author]}/app.bsky.feed.post/${id}`;
 
@@ -50,7 +50,7 @@ function network({ visible = {}, routes = {} } = {}) {
     for (const [prefix, handler] of Object.entries(routes)) {
       if (url.startsWith(prefix)) return handler(url, init);
     }
-    if (/^https:\/\/(andy|cards)\.smith\.wiki\//.test(url)) throw new Error(`publication must not fetch Card pages: ${url}`);
+    if (/^https:\/\/(old|andy|cards)\.smith\.wiki\//.test(url)) throw new Error(`publication must not fetch Card pages: ${url}`);
     if (url.endsWith("/com.atproto.server.createSession")) {
       const { identifier } = JSON.parse(init.body);
       const author = identifier.split(".")[0];
